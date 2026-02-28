@@ -134,22 +134,43 @@ struct LiveTrackingView: View {
 
             Spacer()
 
-            // Center on user button
-            Button {
-                if let location = locationService.currentLocation {
-                    viewModel.centerOnUser(location)
+            // Map control buttons
+            HStack(spacing: 8) {
+                // Show both locations button
+                Button {
+                    if let location = locationService.currentLocation {
+                        viewModel.showBothLocations(userLocation: location, destination: destination)
+                    }
+                } label: {
+                    Image(systemName: "arrow.up.left.and.arrow.down.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Theme.textSecondary)
+                        .padding(10)
+                        .background(Theme.backgroundSecondary)
+                        .clipShape(Circle())
+                        .overlay(
+                            Circle()
+                                .stroke(Theme.accent.opacity(0.2), lineWidth: 1)
+                        )
                 }
-            } label: {
-                Image(systemName: "location.fill")
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(Theme.accent)
-                    .padding(12)
-                    .background(Theme.backgroundSecondary)
-                    .clipShape(Circle())
-                    .overlay(
-                        Circle()
-                            .stroke(Theme.accent.opacity(0.2), lineWidth: 1)
-                    )
+
+                // Center on user button
+                Button {
+                    if let location = locationService.currentLocation {
+                        viewModel.centerOnUser(location)
+                    }
+                } label: {
+                    Image(systemName: "location.fill")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(Theme.accent)
+                        .padding(12)
+                        .background(Theme.backgroundSecondary)
+                        .clipShape(Circle())
+                        .overlay(
+                            Circle()
+                                .stroke(Theme.accent.opacity(0.2), lineWidth: 1)
+                        )
+                }
             }
         }
         .padding(.horizontal)

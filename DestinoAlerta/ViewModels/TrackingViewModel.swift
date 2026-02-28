@@ -12,7 +12,9 @@ import Combine
 final class TrackingViewModel: ObservableObject {
     // Map state
     @Published var cameraPosition: MapCameraPosition = .automatic
-    @Published var isFollowingUser: Bool = true
+
+    // Track if initial centering has been done
+    private var hasInitiallyPositioned: Bool = false
 
     // Distance tracking
     @Published var distanceToDestination: Double = 0 // meters
@@ -28,20 +30,27 @@ final class TrackingViewModel: ObservableObject {
         destination: Destination,
         locationService: LocationService
     ) {
-        // Center map to show both user and destination
-        if let userLocation = locationService.currentLocation {
+        // Center map initially to show both user and destination
+        if let userLocation = locationService.currentLocation, !hasInitiallyPositioned {
             centerMapOnRoute(userLocation: userLocation, destination: destination)
             updateDistance(from: userLocation, to: destination)
+            hasInitiallyPositioned = true
         }
 
-        // Subscribe to location updates
+        // Subscribe to location updates - only update distance, not camera position
         locationService.$currentLocation
             .compactMap { $0 }
             .receive(on: DispatchQueue.main)
             .sink { [weak self] location in
-                self?.updateDistance(from: location, to: destination)
-                if self?.isFollowingUser == true {
-                    self?.updateCameraToFollowUser(location, destination: destination)
+                guard let self = self else { return }
+
+                // Always update distance
+                self.updateDistance(from: location, to: destination)
+
+                // Only center initially if we haven't done so yet
+                if !self.hasInitiallyPositioned {
+                    self.centerMapOnRoute(userLocation: location, destination: destination)
+                    self.hasInitiallyPositioned = true
                 }
             }
             .store(in: &cancellables)
@@ -104,13 +113,7 @@ final class TrackingViewModel: ObservableObject {
         ))
     }
 
-    private func updateCameraToFollowUser(_ location: CLLocation, destination: Destination) {
-        // Keep both user and destination visible
-        centerMapOnRoute(userLocation: location, destination: destination)
-    }
-
     func centerOnUser(_ location: CLLocation) {
-        isFollowingUser = true
         cameraPosition = .region(MKCoordinateRegion(
             center: location.coordinate,
             span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
@@ -118,11 +121,14 @@ final class TrackingViewModel: ObservableObject {
     }
 
     func centerOnDestination(_ destination: Destination) {
-        isFollowingUser = false
         cameraPosition = .region(MKCoordinateRegion(
             center: destination.coordinate,
             span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
         ))
+    }
+
+    func showBothLocations(userLocation: CLLocation, destination: Destination) {
+        centerMapOnRoute(userLocation: userLocation, destination: destination)
     }
 
     // MARK: - Progress
